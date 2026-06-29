@@ -7,7 +7,7 @@
     },
     "auth": {
         "username": "admin",
-        "password_hash": "$2y$12$NQWaecDFSJmhvHJ9HqTiHO8trHJoIcj/vM3wdLdx/UXRB44.vbsRu"
+        "password_hash": ""
     },
     "session": {
         "timeout": 3600
