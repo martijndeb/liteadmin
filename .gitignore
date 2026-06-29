@@ -12,6 +12,12 @@ desktop.ini
 *.tmp
 /tmp/
 
+# Test artifacts
+tests/.tmp/
+__pycache__/
+.pytest_cache/
+test-results/
+
 # SQLite write-ahead / shared-memory sidecars
 *-wal
 *-shm
