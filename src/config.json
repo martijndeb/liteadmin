@@ -1,0 +1,26 @@
+{
+    "app": {
+        "name": "LiteAdmin",
+        "lang": "en",
+        "max_rows": 1000,
+        "buffer_rows": 200
+    },
+    "auth": {
+        "username": "admin",
+        "password_hash": "$2y$12$NQWaecDFSJmhvHJ9HqTiHO8trHJoIcj/vM3wdLdx/UXRB44.vbsRu"
+    },
+    "session": {
+        "timeout": 3600
+    },
+    "create_dir": "databases",
+    "ext_dir": "ext",
+    "extensions": [],
+    "databases": {
+        "sample": {
+            "label": "Sample Database",
+            "path": "databases/sample.sqlite",
+            "readonly": false,
+            "extensions": []
+        }
+    }
+}

@@ -1,0 +1,33 @@
+# LiteAdmin — Caddy configuration
+#
+# Document root must be the folder that contains this file (the src/ folder).
+# Adjust the site address, the `root` path and the php-fpm socket, then run:
+#   caddy run --config ./Caddyfile
+#
+# Caddy applies its own directive order, so `respond` (the block rule) is
+# evaluated before file_server / php_fastcgi regardless of position here.
+
+liteadmin.example.com {
+	root * /var/www/liteadmin/src
+	encode zstd gzip
+
+	# Never serve secrets, the shared library, raw database files or the data dir.
+	@blocked {
+		path /config.json
+		path /lib.php
+		path /databases/*
+		path *.sqlite *.sqlite3 *.db *.sqlite-wal *.sqlite-shm *.sqlite-journal
+	}
+	respond @blocked 403
+
+	php_fastcgi unix//run/php/php-fpm.sock
+	file_server {
+		index index.php
+	}
+
+	header {
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy same-origin
+	}
+}
