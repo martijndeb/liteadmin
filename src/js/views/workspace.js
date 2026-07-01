@@ -694,7 +694,6 @@ async function compareDatabaseDialog(ws) {
   let dbs;
   try { dbs = (await Api.proxy('databases')).databases; } catch (e) { return toast(e.message, true); }
   const targets = dbs.filter(d => d.key !== ws.conn.id && d.exists);
-  if (!targets.length) return toast(t('compare.none'), true);
   const sel = el('select', {}, targets.map(d => el('option', { value: d.key, text: d.label })));
   const out = el('div', {});
   let lastSql = '';
@@ -713,13 +712,18 @@ async function compareDatabaseDialog(ws) {
     try { await Api.proxy('exec', { db: sel.value, sql: lastSql, tx: true }); toast(t('compare.applied')); run(); }
     catch (e) { toast(e.message, true); }
   }
+  const controls = targets.length
+    ? el('nav', { class: 'wrap toolbar' }, [
+        el('div', { class: 'field label suffix border max' }, [sel, el('label', { text: t('compare.target') })]),
+        el('button', { onClick: run }, [el('i', { text: 'difference' }), el('span', { text: t('compare.title') })]),
+      ])
+    : el('article', { class: 'border no-elevate' }, [
+        el('div', { class: 'row' }, [el('i', { text: 'info' }), el('span', { text: t('compare.needTwo') })]),
+      ]);
   const dlg = el('dialog', { class: 'large fit', 'aria-label': t('compare.title') }, [
     el('h5', { text: t('compare.title') + ' — ' + ws.conn.meta.label }),
     el('p', { class: 'small-text', text: t('compare.intro') }),
-    el('nav', { class: 'wrap toolbar' }, [
-      el('div', { class: 'field label suffix border max' }, [sel, el('label', { text: t('compare.target') })]),
-      el('button', { onClick: run }, [el('i', { text: 'difference' }), el('span', { text: t('compare.title') })]),
-    ]),
+    controls,
     out,
     el('nav', { class: 'right-align' }, [el('button', { class: 'border', text: t('prefs.close'), onClick: () => dlg.remove() })]),
   ]);
@@ -2058,6 +2062,28 @@ function computeSuggestions(ws) {
 async function backup(ws) { try { await ws.conn.backup(); } catch (e) { toast(e.message, true); } }
 async function saveLocal(ws) { try { await ws.conn.save(); toast(t('common.save')); } catch (e) { toast(e.message, true); } }
 
+function copyText(text) { if (navigator.clipboard) navigator.clipboard.writeText(text); toast(t('advice.copied')); }
+
+async function codeViewerDialog(title, content, opts) {
+  const host = el('div', { class: 'viewer-editor' });
+  let editor = null;
+  const val = () => (editor ? editor.getValue() : content);
+  const dlg = el('dialog', { class: 'large fit viewer-dialog', 'aria-label': title }, [
+    el('h5', { text: title }),
+    el('p', { class: 'small-text', text: t('export.editableHint') }),
+    host,
+    el('nav', { class: 'right-align' }, [
+      el('button', { class: 'border', onClick: () => copyText(val()) }, [el('i', { text: 'content_copy' }), el('span', { text: t('advice.copy') })]),
+      el('button', { class: 'border', onClick: () => download(opts.filename, val(), opts.mime) }, [el('i', { text: 'download' }), el('span', { text: t('export.download') })]),
+      el('button', { onClick: () => dlg.close() }, [el('span', { text: t('prefs.close') })]),
+    ]),
+  ]);
+  dlg.addEventListener('close', () => { if (editor) { editor.dispose(); editor = null; } dlg.remove(); });
+  document.body.append(dlg); dlg.showModal();
+  try { editor = await createEditor(host, content, prefs.get('fontSize'), { language: opts.language, wordWrap: 'on' }); }
+  catch (_) { host.append(el('pre', { class: 'code-block scroll', text: content })); }
+}
+
 async function exportSchema(ws) {
   try {
     const res = await ws.conn.query(
@@ -2065,8 +2091,7 @@ async function exportSchema(ws) {
       "ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'trigger' THEN 2 ELSE 3 END, name",
       { limit: 100000 });
     const ddl = res.rows.map(r => String(r[0]).trim().replace(/;?\s*$/, ';')).join('\n\n') + '\n';
-    download((ws.conn.meta.label || 'schema') + '.schema.sql', ddl, 'application/sql');
-    toast(t('db.schemaExported'));
+    await codeViewerDialog(t('db.exportSchema'), ddl, { language: 'sql', filename: (ws.conn.meta.label || 'schema') + '.schema.sql', mime: 'application/sql' });
   } catch (e) { toast(e.message, true); }
 }
 
@@ -2117,8 +2142,7 @@ async function generateOpenApi(ws) {
       components: { schemas },
     };
     loading.remove();
-    download((ws.conn.meta.label || 'api') + '.openapi.json', JSON.stringify(spec, null, 2), 'application/json');
-    toast(t('db.swaggerDone'));
+    await codeViewerDialog(t('db.swagger'), JSON.stringify(spec, null, 2), { language: 'json', filename: (ws.conn.meta.label || 'api') + '.openapi.json', mime: 'application/json' });
   } catch (e) { loading.remove(); toast(e.message, true); }
 }
 

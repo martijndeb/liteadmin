@@ -37,26 +37,33 @@ export function initMonaco() {
   return monacoReady;
 }
 
-export async function createEditor(host, value, fontSize) {
+export async function createEditor(host, value, fontSize, opts = {}) {
   await initMonaco();
+  const language = opts.language || 'sql';
+  if (language === 'json') {
+    try { monaco.languages.json.jsonDefaults.setDiagnosticsOptions({ validate: false, enableSchemaRequest: false }); } catch (_) {}
+  }
+  const lineNumbers = opts.lineNumbers || 'off';
+  const numbered = lineNumbers !== 'off';
   const editor = monaco.editor.create(host, {
     value: value || '',
-    language: 'sql',
+    language,
     theme: document.documentElement.style.colorScheme === 'dark' ? 'vs-dark' : 'vs',
     automaticLayout: true,
-    minimap: { enabled: false },
+    minimap: { enabled: !!opts.minimap },
     fontSize: fontSize || 14,
     fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
     scrollBeyondLastLine: false,
-    wordWrap: 'on',
+    wordWrap: opts.wordWrap || 'on',
     tabSize: 2,
-    lineNumbers: 'off',
-    lineNumbersMinChars: 0,
-    lineDecorationsWidth: 0,
+    readOnly: !!opts.readOnly,
+    lineNumbers,
+    lineNumbersMinChars: numbered ? 3 : 0,
+    lineDecorationsWidth: numbered ? 8 : 0,
     glyphMargin: false,
-    folding: false,
-    renderLineHighlight: 'none',
-    overviewRulerLanes: 0,
+    folding: !!opts.folding,
+    renderLineHighlight: numbered ? 'line' : 'none',
+    overviewRulerLanes: opts.folding ? 2 : 0,
     hideCursorInOverviewRuler: true,
     fixedOverflowWidgets: true,
     quickSuggestions: { other: true, comments: false, strings: true },
