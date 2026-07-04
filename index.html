@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>liteadmin apt repository</title>
+<meta name="description" content="APT repository for LiteAdmin, a hostable SQLite browser and editor.">
+<style>
+  :root {
+    --bg: #ffffff;
+    --fg: #1a1a1a;
+    --dim: #6a6a6a;
+    --rule: #d0d0d0;
+    --block: #f4f4f4;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101010;
+      --fg: #d8d8d8;
+      --dim: #8a8a8a;
+      --rule: #333333;
+      --block: #1b1b1b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 14px;
+    line-height: 1.6;
+    max-width: 80ch;
+    margin: 0 auto;
+    padding: 2rem 1rem 4rem;
+  }
+  h1 {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin: 0 0 0.25rem;
+  }
+  h2 {
+    font-size: 14px;
+    font-weight: 700;
+    margin: 2.5rem 0 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+  }
+  h2::before { content: "## "; color: var(--dim); }
+  p { margin: 0.75rem 0; }
+  .dim { color: var(--dim); }
+  a { color: inherit; }
+  a:hover { background: var(--block); }
+  pre {
+    background: var(--block);
+    border-left: 3px solid var(--rule);
+    padding: 0.75rem 1rem;
+    overflow-x: auto;
+    margin: 0.75rem 0;
+  }
+  code { font-family: inherit; }
+  ul { padding-left: 2ch; list-style: none; margin: 0.75rem 0; }
+  li::before { content: "- "; color: var(--dim); }
+  footer {
+    margin-top: 3rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--rule);
+    color: var(--dim);
+  }
+</style>
+</head>
+<body>
+
+<h1>liteadmin apt repository</h1>
+<p class="dim">A hostable SQLite browser and editor. Like phpMyAdmin, but for SQLite.</p>
+
+<ul>
+  <li>Source: <a href="https://github.com/martijndeb/liteadmin">github.com/martijndeb/liteadmin</a></li>
+  <li>Signing key: <a href="pubkey.gpg">pubkey.gpg</a></li>
+  <li>Suite: stable &nbsp;|&nbsp; Component: main &nbsp;|&nbsp; Architecture: all</li>
+</ul>
+
+<h2>1. Import the signing key</h2>
+<p>Packages and repository metadata are signed. Import the public key first:</p>
+<pre><code>curl -fsSL https://martijndeb.github.io/liteadmin/pubkey.gpg \
+  | sudo gpg --dearmor -o /usr/share/keyrings/liteadmin.gpg</code></pre>
+
+<h2>2. Add the repository</h2>
+<p>Create <code>/etc/apt/sources.list.d/liteadmin.sources</code> (deb822 format):</p>
+<pre><code>Types: deb
+URIs: https://martijndeb.github.io/liteadmin
+Suites: stable
+Components: main
+Signed-By: /usr/share/keyrings/liteadmin.gpg</code></pre>
+
+<h2>3. Install</h2>
+<pre><code>sudo apt update
+sudo apt install liteadmin</code></pre>
+<p>The package installs to <code>/usr/share/liteadmin</code>. Configuration lives in
+<code>/etc/liteadmin/config.json</code>, databases in <code>/var/lib/liteadmin/databases</code>.
+Point your web server's document root at <code>/usr/share/liteadmin</code>.</p>
+
+<h2>4. Web server example (nginx)</h2>
+<p>Deny access to the config and database paths — they are symlinked
+inside the document root:</p>
+<pre><code>server {
+    listen 80;
+    server_name liteadmin.internal;
+    root /usr/share/liteadmin;
+    index index.php;
+
+    location ~ ^/(config\.json|databases) { deny all; }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php-fpm.sock;
+    }
+}</code></pre>
+
+<h2>5. Automatic updates (optional)</h2>
+<p>To let unattended-upgrades pick up new releases from this repository,
+create <code>/etc/apt/apt.conf.d/51liteadmin</code>:</p>
+<pre><code>Unattended-Upgrade::Origins-Pattern { "origin=liteadmin"; };</code></pre>
+<p>Verify with:</p>
+<pre><code>sudo unattended-upgrade --dry-run --debug</code></pre>
+
+<h2>Verify a package</h2>
+<p>Key fingerprint check after import:</p>
+<pre><code>gpg --show-keys /usr/share/keyrings/liteadmin.gpg</code></pre>
+<p>Compare the fingerprint against <i>BEF1A572607500ED2DF3D84C901981C28C73FCBE</i>.</p>
+
+<footer>
+<p>liteadmin, MIT licensed - packages built and signed via GitHub Actions on tagged releases.</p>
+</footer>
+
+</body>
+</html>
