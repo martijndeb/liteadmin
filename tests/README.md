@@ -36,5 +36,7 @@ pytest --slowmo 300      # slow each step down (ms)
   the `authed_page` fixture (a page already signed in).
 - `test_setup.py` — first-run setup and session.
 - `test_login.py` — sign in, sign out, bad password.
+- `test_change_password.py` — the 8-character minimum rule.
 - `test_browse.py` — table list and the data grid.
 - `test_sql.py` — running SQL in the editor.
+- `test_packaging.py` — checks on the packaging templates.
