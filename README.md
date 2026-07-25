@@ -299,6 +299,19 @@ To add a language: copy `src/i18n/en.json` to `src/i18n/<code>.json`, translate 
 (keep the keys), then add the code to `SUPPORTED` and a display name to `LANG_NAMES` in
 `src/js/i18n.js`. All locale files share the same key set.
 
+## Contributing
+
+`src/config.json` is a template and its `auth.password_hash` must stay empty in the
+repository — never commit a real hash. A shared git hook enforces this. Enable it once
+after cloning:
+
+```sh
+git config core.hooksPath .githooks
+```
+
+The `pre-commit` hook then rejects any commit that stages a non-empty
+`auth.password_hash` in `src/config.json`.
+
 ## License
 
 Released under the [MIT License](LICENSE). Vendored libraries in `src/vendor/` keep their

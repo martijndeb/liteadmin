@@ -1,0 +1,40 @@
+#!/bin/sh
+#
+# Prevent committing a real auth.password_hash in src/config.json.
+#
+# src/config.json ships as a template and must keep an empty password_hash so
+# that secrets are never leaked into the repository history. This hook blocks
+# any commit that stages a non-empty auth.password_hash.
+#
+# Enable it once per clone with:
+#   git config core.hooksPath .githooks
+
+CONFIG='src/config.json'
+
+# Nothing to check unless src/config.json is part of this commit.
+if git diff --cached --name-only | grep -qx "$CONFIG"; then
+    :
+else
+    exit 0
+fi
+
+# Inspect the staged content (not the working tree) so partial adds are caught.
+staged="$(git show ":$CONFIG" 2>/dev/null)"
+
+hash="$(printf '%s' "$staged" | python3 -c '
+import json, sys
+try:
+    data = json.load(sys.stdin)
+except json.JSONDecodeError:
+    # Malformed JSON is caught elsewhere; do not block on it here.
+    sys.exit(0)
+print(data.get("auth", {}).get("password_hash", ""))
+')" || exit 0
+
+if [ -n "$hash" ]; then
+    echo "pre-commit: refusing to commit a non-empty auth.password_hash in $CONFIG" >&2
+    echo "            Reset it to \"\" before committing (it is a template value)." >&2
+    exit 1
+fi
+
+exit 0
