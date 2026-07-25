@@ -34,3 +34,21 @@ Homepage: https://github.com/martijndeb/liteadmin
 Description: Hostable SQLite browser and editor
  Liteadmin is a web-based SQLite database browser and editor. It allows you to manage your SQLite databases through a simple and intuitive web interface. With liteadmin, you can create, read, update, and delete records in your SQLite databases, as well as execute SQL queries and manage database schema.
 
+Package: liteadmin
+Architecture: all
+Version: 0.3.0
+Priority: optional
+Section: web
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Depends: php-fpm, php-sqlite3
+Recommends: nginx
+Filename: pool/main/liteadmin_0.3.0_all.deb
+Size: 3106448
+MD5sum: a79ef82ecda2e9730553c863ab67e469
+SHA1: 5f19713c2467cb26608485980321d093a3d1a555
+SHA256: f61c5cd081e642ec014795bf20b336c9edf86a579be34f877132c08414cfadae
+SHA512: 0a0fe81f15a071ee6e52a76b4c432162fcc9e56be21964847156a9ec1283c747ac89893af128c81e38ae2b839b74ca76b4a5fa9e0196157234cdb72994f61273
+Homepage: https://github.com/martijndeb/liteadmin
+Description: Hostable SQLite browser and editor
+ Liteadmin is a web-based SQLite database browser and editor. It allows you to manage your SQLite databases through a simple and intuitive web interface. With liteadmin, you can create, read, update, and delete records in your SQLite databases, as well as execute SQL queries and manage database schema.
+
