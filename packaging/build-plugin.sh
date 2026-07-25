@@ -1,15 +1,19 @@
 #!/bin/sh
 # Build a standalone .deb for a LiteAdmin plugin.
 #
-#   packaging/build-plugin.sh <plugin-name> <version>
+#   packaging/build-plugin.sh <plugin-name> <version> [output-dir]
 #
 # Plugins live in src/plugins/<name>/. The core package excludes that directory,
 # so a plugin is shipped as its own .deb: this installs src/plugins/<name>/ into
 # /usr/share/liteadmin/plugins/<name>/ and depends on the liteadmin package.
 set -eu
 
-name="${1:?usage: build-plugin.sh <plugin-name> <version>}"
-version="${2:?usage: build-plugin.sh <plugin-name> <version>}"
+name="${1:?usage: build-plugin.sh <plugin-name> <version> [output-dir]}"
+version="${2:?usage: build-plugin.sh <plugin-name> <version> [output-dir]}"
+outdir="$(cd "${3:-.}" && pwd)"
+
+cd "$(dirname "$0")/.."
+. packaging/lib.sh
 
 src="src/plugins/$name"
 control="packaging/$name/control"
@@ -17,9 +21,14 @@ control="packaging/$name/control"
 [ -f "$control" ] || { echo "no control file: $control" >&2; exit 1; }
 
 stage="$(mktemp -d)/$name"
-mkdir -p "$stage/DEBIAN" "$stage/usr/share/liteadmin/plugins/$name"
-sed "s/__VERSION__/$version/" "$control" > "$stage/DEBIAN/control"
-cp -r "$src/." "$stage/usr/share/liteadmin/plugins/$name/"
+root="$stage/usr/share/liteadmin/plugins/$name"
+mkdir -p "$stage/DEBIAN" "$root"
+cp -r "$src/." "$root/"
+
+# A plugin's own database lives in /var/lib/liteadmin/data/<name>/ at runtime;
+# a copy from the developer's tree must not be shipped as package content.
+find "$root" -name '*.sqlite' -delete
+deb_scrub "$root"
 
 for script in preinst postinst prerm postrm; do
     if [ -f "packaging/$name/$script" ]; then
@@ -27,5 +36,7 @@ for script in preinst postinst prerm postrm; do
     fi
 done
 
-dpkg-deb --build --root-owner-group "$stage" "${name}_${version}_all.deb"
-echo "built ${name}_${version}_all.deb"
+deb_normalize "$stage"
+deb_md5sums   "$stage"
+deb_control   "$stage" "$control" "$version"
+deb_build     "$stage" "$outdir/${name}_${version}_all.deb"

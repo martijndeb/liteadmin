@@ -1,6 +1,7 @@
 """Shared fixtures: a throwaway docroot served by `php -S`, plus a one-time
 first-run setup that the authenticated tests reuse via a saved session."""
 import json
+import os
 import shutil
 import socket
 import subprocess
@@ -11,7 +12,10 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parent.parent
-SRC = ROOT / "src"
+# Normally the working tree. Point LITEADMIN_SRC at an unpacked .deb to run the
+# same suite against what actually ships -- that is what catches an over-eager
+# prune of the vendored editor assets (see packaging/build-core.sh).
+SRC = Path(os.environ.get("LITEADMIN_SRC") or ROOT / "src")
 TMP = ROOT / "tests" / ".tmp"
 DOCROOT = TMP / "www"
 STATE = TMP / "state.json"
@@ -27,6 +31,16 @@ def _prepare_docroot():
     if TMP.exists():
         shutil.rmtree(TMP)
     shutil.copytree(SRC, DOCROOT)
+
+    # A packaged docroot leaves out the config and the managed databases; the
+    # postinst symlinks those in from /etc and /var/lib. Stand in for it here so
+    # the suite runs unchanged against either source.
+    for name in ("config.json", "databases"):
+        if not (DOCROOT / name).exists():
+            src = ROOT / "src" / name
+            copy = shutil.copytree if src.is_dir() else shutil.copy2
+            copy(src, DOCROOT / name)
+
     cfg_path = DOCROOT / "config.json"
     cfg = json.loads(cfg_path.read_text())
     cfg["auth"]["password_hash"] = ""

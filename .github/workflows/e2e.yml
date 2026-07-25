@@ -33,6 +33,27 @@ jobs:
       - name: Run end-to-end tests
         run: pytest
 
+      # The core .deb ships a pruned copy of the vendored editor (see
+      # packaging/build-core.sh). Booting the packaged docroot in a real browser
+      # is what proves the prune kept everything the app loads -- a missing
+      # module 404s at runtime and nowhere else.
+      - name: Build the packages
+        run: |
+          sh packaging/build-core.sh 0.0.0-ci
+          for dir in src/plugins/*/; do
+            sh packaging/build-plugin.sh "$(basename "$dir")" 0.0.0-ci
+          done
+
+      - name: Verify the packages
+        run: sh packaging/verify-deb.sh ./*.deb
+
+      - name: Exercise the editor in the packaged docroot
+        env:
+          LITEADMIN_SRC: ${{ github.workspace }}/pkgroot/usr/share/liteadmin
+        run: |
+          dpkg-deb -x liteadmin_0.0.0-ci_all.deb pkgroot
+          pytest tests/test_sql.py
+
       - uses: actions/upload-artifact@v7
         if: failure()
         with:

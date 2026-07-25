@@ -2,7 +2,10 @@
 set -e
 
 if [ "$1" = "configure" ]; then
-    mkdir -p /etc/liteadmin /var/lib/liteadmin/databases
+    # data/ holds per-plugin state (the API-key store, REST API exposure rules).
+    # Like databases/, it is written by the web server at runtime, so it belongs
+    # under /var/lib rather than in the read-only, dpkg-owned /usr/share tree.
+    mkdir -p /etc/liteadmin /var/lib/liteadmin/databases /var/lib/liteadmin/data
 
     if [ ! -f /etc/liteadmin/config.json ]; then
         touch /etc/liteadmin/config.json
@@ -11,10 +14,13 @@ if [ "$1" = "configure" ]; then
     # Symbolic links for the config files and storage directories
     ln -sfn /etc/liteadmin/config.json    /usr/share/liteadmin/config.json
     ln -sfn /var/lib/liteadmin/databases  /usr/share/liteadmin/databases
+    ln -sfn /var/lib/liteadmin/data       /usr/share/liteadmin/data
 
     chown www-data:www-data /etc/liteadmin/config.json
     chmod 640 /etc/liteadmin/config.json
     chown -R www-data:www-data /var/lib/liteadmin
+    # API keys live here: readable by the web server only.
+    chmod 750 /var/lib/liteadmin/data
 
     systemctl try-reload-or-restart 'php*-fpm.service' 2>/dev/null || true
 fi

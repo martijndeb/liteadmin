@@ -10,43 +10,60 @@ jobs:
   deb:
     runs-on: ubuntu-latest
     steps:
+      # The tag alone is enough to build from; the apt repo is fetched shallowly
+      # below. Skipping the history keeps the checkout to a couple of seconds
+      # even as gh-pages accumulates published .debs.
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
 
       - name: Extract version number
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
 
-      - name: Build the package
+      - name: Build the packages
         run: |
-          mkdir -p stage/usr/share/liteadmin stage/DEBIAN
-          cp -r src/. stage/usr/share/liteadmin/
-          rm -rf stage/usr/share/liteadmin/databases \
-                 stage/usr/share/liteadmin/config.json \
-                 stage/usr/share/liteadmin/plugins
-          sed "s/__VERSION__/${VERSION}/" packaging/control > stage/DEBIAN/control
-          install -m 755 packaging/postinst stage/DEBIAN/postinst
-          install -m 755 packaging/postrm   stage/DEBIAN/postrm
-          dpkg-deb --build --root-owner-group stage "liteadmin_${VERSION}_all.deb"
+          sh packaging/build-core.sh "${VERSION}"
+          for dir in src/plugins/*/; do
+            name="$(basename "$dir")"
+            if [ ! -f "packaging/${name}/control" ]; then
+              echo "::warning::skipping ${name}: no packaging/${name}/control"
+              continue
+            fi
+            sh packaging/build-plugin.sh "$name" "${VERSION}"
+          done
 
-      - name: Build the release package
+      # Nothing gets published that has not passed the same content, mode and
+      # integrity checks the e2e workflow runs on every pull request.
+      - name: Verify the packages
+        run: sh packaging/verify-deb.sh ./*.deb
+
+      - name: Publish the release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" liteadmin_*.deb --clobber
+            gh release upload "$GITHUB_REF_NAME" ./*.deb --clobber
           else
-            gh release create "$GITHUB_REF_NAME" liteadmin_*.deb --generate-notes
+            gh release create "$GITHUB_REF_NAME" ./*.deb --generate-notes
           fi
 
-      - name: Import the release script
+      - name: Import the signing key
         run: echo "${{ secrets.APT_GPG_KEY }}" | gpg --batch --import
 
       - name: Update the apt repo
         run: |
-          git fetch origin gh-pages
+          git fetch --depth=1 origin gh-pages
           git worktree add aptrepo gh-pages
           mkdir -p aptrepo/pool/main
-          cp "liteadmin_${VERSION}_all.deb" aptrepo/pool/main/
-          ls -1v aptrepo/pool/main/liteadmin_*.deb | head -n -5 | xargs -r rm --
+          cp ./*.deb aptrepo/pool/main/
+
+          # Keep the five most recent versions of each package, not of the pool
+          # as a whole -- otherwise a release with several plugins would evict
+          # still-referenced core packages.
+          for deb in ./*.deb; do
+            pkg="$(basename "$deb" | cut -d_ -f1)"
+            ls -1v "aptrepo/pool/main/${pkg}_"*.deb | head -n -5 | xargs -r rm --
+          done
 
           cd aptrepo
           mkdir -p dists/stable/main/binary-amd64 \

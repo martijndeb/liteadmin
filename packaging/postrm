@@ -1,5 +1,18 @@
 #!/bin/sh
 set -e
+
+# postinst creates these symlinks, so dpkg does not know about them and would
+# leave them dangling. Only the links go -- never their targets, which hold the
+# admin's databases and plugin state.
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    for link in config.json databases data; do
+        if [ -L "/usr/share/liteadmin/$link" ]; then
+            rm -f "/usr/share/liteadmin/$link"
+        fi
+    done
+    rmdir /usr/share/liteadmin 2>/dev/null || true
+fi
+
 if [ "$1" = "purge" ]; then
     rm -f /etc/liteadmin/config.json
     rmdir /etc/liteadmin 2>/dev/null || true
