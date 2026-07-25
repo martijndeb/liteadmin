@@ -1,0 +1,11 @@
+{
+  "name": "liteadmin-restapi",
+  "label": "REST API",
+  "version": "0.1.0",
+  "description": "Expose selected databases and tables as a CRUD REST API at /api/<database>/<table>, authenticated with the apikeys plugin. Generates an OpenAPI 3.0 document per database at /api/<database>/openapi.json.",
+  "server": "plugin.php",
+  "serverClass": "RestApiPlugin",
+  "client": "plugin.js",
+  "provides": ["restapi"],
+  "requires": ["liteadmin-apikeys"]
+}

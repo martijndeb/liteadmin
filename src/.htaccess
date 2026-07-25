@@ -29,3 +29,10 @@
 </FilesMatch>
 
 Options -Indexes
+
+# REST API plugin (liteadmin-restapi): route /api/<db>/<table> to its front
+# controller. Harmless when the plugin is not installed (the target 404s).
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+  RewriteRule ^api/(.+)$ plugins/liteadmin-restapi/api.php?_path=$1 [QSA,L]
+</IfModule>

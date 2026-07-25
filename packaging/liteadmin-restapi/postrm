@@ -1,0 +1,21 @@
+#!/bin/sh
+set -e
+
+# Disable the plugin by removing its name from "plugins" in the config, in case
+# it had been enabled manually.
+if [ "$1" = "remove" ] || [ "$1" = "purge" ]; then
+    CONFIG=/etc/liteadmin/config.json
+    if [ -f "$CONFIG" ] && command -v php >/dev/null 2>&1; then
+        php -r '
+            $f = $argv[1]; $name = $argv[2];
+            $c = json_decode(@file_get_contents($f), true);
+            if (!is_array($c)) exit;
+            if (isset($c["plugins"]) && is_array($c["plugins"])) {
+                $c["plugins"] = array_values(array_filter($c["plugins"], fn($x) => $x !== $name));
+            }
+            file_put_contents($f, json_encode($c, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+        ' "$CONFIG" liteadmin-restapi || true
+    fi
+fi
+
+exit 0

@@ -1,0 +1,16 @@
+Package: liteadmin-restapi
+Version: __VERSION__
+Section: web
+Priority: optional
+Architecture: all
+Depends: liteadmin (>= 0.3.0), liteadmin-apikeys (>= 0.3.0), php-cli
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Homepage: https://github.com/martijndeb/liteadmin
+Description: REST API plugin for LiteAdmin
+ Exposes selected LiteAdmin databases and tables as a CRUD REST API at
+ /api/<database>/<table>, using the standard GET, POST, PUT, PATCH and DELETE
+ verbs. Requests are authenticated with the liteadmin-apikeys plugin, and an
+ OpenAPI 3.0 document is generated per database at /api/<database>/openapi.json.
+ The plugin is optional and, unlike most LiteAdmin plugins, is NOT enabled
+ automatically on install: pick the databases and tables to serve from the
+ Plugins panel first, and add "liteadmin-restapi" to the config to enable it.

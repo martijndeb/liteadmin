@@ -262,9 +262,38 @@ the foundation other plugins build on: it publishes
 
 Once enabled, manage keys from the **Plugins** section on the start page.
 
-Planned plugins that slot into the same system: a **REST API** exposing the generated OpenAPI
-endpoints as CRUD, a **code generator** (tables → typed classes/definitions), and an **MCP server** —
-each guarding its endpoints with the `apikey` guard above.
+### Example plugin: `liteadmin-restapi`
+
+`src/plugins/liteadmin-restapi/` builds on the API keys plugin to expose selected databases and
+tables as a **CRUD REST API**. It depends on `liteadmin-apikeys` and needs no new dependencies.
+
+- **URL scheme:** `/api/<database>/<table>` (collection) and `/api/<database>/<table>/<id>` (item),
+  using `GET`, `POST`, `PUT`, `PATCH` and `DELETE`. Collections accept `?limit=`, `?offset=` and
+  simple `?column=value` filters.
+- **Auth & scopes:** every request needs a valid API key (`X-Api-Key: <key>` or
+  `Authorization: Bearer <key>`) from `liteadmin-apikeys`. A **read** key may `GET`; only a
+  **read+write** key may `POST`/`PUT`/`PATCH`/`DELETE` (else `403`). Write verbs are also refused on
+  read-only databases.
+- **OpenAPI:** a per-database OpenAPI 3.0 document is generated on the fly at
+  `/api/<database>/openapi.json`, linked from each database in the panel. It is readable with a valid
+  key or by a logged-in admin (so the panel links open in the browser).
+- **Exposure panel:** open **REST API** from the Plugins section to choose which databases and tables
+  are served (with **Select all** / **Deselect all**). A database is served once at least one of its
+  tables is selected. The selection is stored in a SQLite database in the plugin data dir
+  (`restapi.sqlite`), the same way `liteadmin-apikeys` stores its keys. Until you save for the first
+  time, **all databases and tables are exposed by default** — but the plugin still does nothing until
+  it is enabled.
+- **Not auto-enabled:** unlike other plugins, its `.deb` does **not** add itself to `plugins` on
+  install (it serves data, so enabling is left deliberate). Enable it by adding `"liteadmin-restapi"`
+  to `plugins` in the config.
+
+The pretty `/api/...` URLs rely on a rewrite to the plugin's `api.php` front controller: the bundled
+Caddy config (`docker/Caddyfile`) and `src/.htaccess` (Apache, needs `mod_rewrite`) ship it already.
+Under the PHP built-in server, reach the controller directly as
+`/plugins/liteadmin-restapi/api.php/<database>/<table>`.
+
+Planned plugins that slot into the same system: a **code generator** (tables → typed
+classes/definitions) and an **MCP server** — each guarding its endpoints with the `apikey` guard above.
 
 ### Configuration
 

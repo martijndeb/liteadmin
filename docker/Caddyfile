@@ -11,6 +11,11 @@
 	}
 	respond @blocked 403
 
+	# REST API plugin (liteadmin-restapi): /api/<db>/<table> -> its front controller.
+	# Harmless 404 when the plugin is not installed.
+	@restapi path_regexp restapi ^/api/(.+)$
+	rewrite @restapi /plugins/liteadmin-restapi/api.php?_path={re.restapi.1}&{query}
+
 	php_fastcgi 127.0.0.1:9000
 	file_server {
 		index index.php

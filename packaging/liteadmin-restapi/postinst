@@ -1,0 +1,14 @@
+#!/bin/sh
+set -e
+
+# Unlike most LiteAdmin plugins, the REST API is NOT enabled automatically: it
+# serves database contents, so enabling it is left an explicit, deliberate step.
+# Choose which databases/tables to expose from the Plugins panel, then enable it
+# by adding "liteadmin-restapi" to "plugins" in /etc/liteadmin/config.json.
+if [ "$1" = "configure" ]; then
+    echo "liteadmin-restapi installed but not enabled."
+    echo "Enable it by adding \"liteadmin-restapi\" to \"plugins\" in /etc/liteadmin/config.json"
+    echo "(it depends on liteadmin-apikeys, which must also be enabled)."
+fi
+
+exit 0
