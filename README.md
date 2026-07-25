@@ -341,6 +341,10 @@ git config core.hooksPath .githooks
 The `pre-commit` hook then rejects any commit that stages a non-empty
 `auth.password_hash` in `src/config.json`.
 
+## Contact
+
+Use the issues tab for technical issues, or reach out on Mastodon on my handle @martijn@ieji.de .
+
 ## License
 
 Released under the [MIT License](LICENSE). Vendored libraries in `src/vendor/` keep their
