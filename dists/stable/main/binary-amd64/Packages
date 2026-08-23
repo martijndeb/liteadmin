@@ -18,6 +18,26 @@ Description: API key management plugin for LiteAdmin
  scopes. It publishes the "apikey" auth guard and the "apikeys" service so
  other LiteAdmin plugins (REST API, MCP server, ...) can require a valid key.
 
+Package: liteadmin-apikeys
+Architecture: all
+Version: 0.3.2
+Priority: optional
+Section: web
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Installed-Size: 36
+Depends: liteadmin (>= 0.3.0), php-cli
+Filename: pool/main/liteadmin-apikeys_0.3.2_all.deb
+Size: 4376
+MD5sum: b8e3ad4f7e6b3e1576dc7494a69262bd
+SHA1: 309c67dd32cc1e0ca5d29a0837d38d91103fa672
+SHA256: beaca08a53dcaf242faa3760141d4c1fb93440954ca5bc6f30f0b3f65c7a2999
+SHA512: f00096671d264c34b392c4bb444e6a0c00e4581224c8a116bb68522c6ed9039843fe541643f080d933aaebdfe43a572ed4ac6a9268aadb26eb404b80b81ed5a5
+Homepage: https://github.com/martijndeb/liteadmin
+Description: API key management plugin for LiteAdmin
+ Adds a plugin to LiteAdmin that issues and manages API keys with read/write
+ scopes. It publishes the "apikey" auth guard and the "apikeys" service so
+ other LiteAdmin plugins (REST API, MCP server, ...) can require a valid key.
+
 Package: liteadmin-restapi
 Architecture: all
 Version: 0.3.1
@@ -32,6 +52,30 @@ MD5sum: 21bfcc82e5bb20388fc8636aaa4423a9
 SHA1: 54de83eef8c5db7e460ff219db0b67e2cc64bd3c
 SHA256: eb1ae0fba12b41c23b4b79a78e493d442e6e3ad5cd42a403b6e2c02a6deefe98
 SHA512: 6f4558b76557def9381204b2d651a4d00489e25c813fef0b6f6d35a22d31c8ccb76c66555b84e13f3f39d8da208b4f02d2d41956295095856115bceef72cff62
+Homepage: https://github.com/martijndeb/liteadmin
+Description: REST API plugin for LiteAdmin
+ Exposes selected LiteAdmin databases and tables as a CRUD REST API at
+ /api/<database>/<table>, using the standard GET, POST, PUT, PATCH and DELETE
+ verbs. Requests are authenticated with the liteadmin-apikeys plugin, and an
+ OpenAPI 3.0 document is generated per database at /api/<database>/openapi.json.
+ The plugin is optional and, unlike most LiteAdmin plugins, is NOT enabled
+ automatically on install: pick the databases and tables to serve from the
+ Plugins panel first, and add "liteadmin-restapi" to the config to enable it.
+
+Package: liteadmin-restapi
+Architecture: all
+Version: 0.3.2
+Priority: optional
+Section: web
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Installed-Size: 64
+Depends: liteadmin (>= 0.3.0), liteadmin-apikeys (>= 0.3.0), php-cli
+Filename: pool/main/liteadmin-restapi_0.3.2_all.deb
+Size: 10808
+MD5sum: ca5a9656e2ab079ad1a1800bbf57de9e
+SHA1: cfaa1458facdf60dce59c8d889ed643cd95a006c
+SHA256: cf1b592ec489fbf1a0b05be917a0a1dffa86153fa627a23636e15fd28e8d0646
+SHA512: 16304ea6e0f329681be0d9bfba87de8053023b057b69434a37b10ab2f056bffa130f9b218d60720e28140a56199a92b6acf3ccfa04ad510304ef3b74e5c0bcf5
 Homepage: https://github.com/martijndeb/liteadmin
 Description: REST API plugin for LiteAdmin
  Exposes selected LiteAdmin databases and tables as a CRUD REST API at
@@ -111,6 +155,25 @@ MD5sum: a7c27afd080454f7ac169aff3cac47de
 SHA1: 7136ee518406cec445acc7ff13852719070c147e
 SHA256: dfc39d7262717b7d532bb1978e2ef8f67a62cf317e568590a678733c87711a26
 SHA512: af555ea5672b1b3ab64be3571fef9e4b24f70c8a900684d4eb35e3f481bcdbb1fa9d9de994d3a4bd96079a3e496dfff806324f9c67335ee8fd2351bf5b2f7847
+Homepage: https://github.com/martijndeb/liteadmin
+Description: Hostable SQLite browser and editor
+ Liteadmin is a web-based SQLite database browser and editor. It allows you to manage your SQLite databases through a simple and intuitive web interface. With liteadmin, you can create, read, update, and delete records in your SQLite databases, as well as execute SQL queries and manage database schema.
+
+Package: liteadmin
+Architecture: all
+Version: 0.3.2
+Priority: optional
+Section: web
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Installed-Size: 6656
+Depends: php-fpm, php-sqlite3
+Recommends: nginx
+Filename: pool/main/liteadmin_0.3.2_all.deb
+Size: 1775986
+MD5sum: 96fd0ea2efbceec59ebcdcc75535e159
+SHA1: 3757e4caa69963106b0c686aa1bc178c24e79289
+SHA256: 026236859e386eb8e1d07f7d49d5c835ced97b275fd3519d6cce0df6e7c652db
+SHA512: 9fc2f32399a17ca5b3a7496b054601f52fced8792d32c3402904f56964c88f42c07034b4c48e8c01ec1bb2c36550cceb12cf0361cec525294ee48bf4afb1bd95
 Homepage: https://github.com/martijndeb/liteadmin
 Description: Hostable SQLite browser and editor
  Liteadmin is a web-based SQLite database browser and editor. It allows you to manage your SQLite databases through a simple and intuitive web interface. With liteadmin, you can create, read, update, and delete records in your SQLite databases, as well as execute SQL queries and manage database schema.
