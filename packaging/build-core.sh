@@ -50,8 +50,9 @@ rm -rf "$root/databases" "$root/data" "$root/config.json" "$root/config.local.js
 # Plugins ship separately.
 rm -rf "$root/plugins"
 # Loadable SQLite extensions are dropped in by the admin at runtime; a binary
-# sitting in a developer's src/ext/ must not ride along into the package.
-find "$root/ext" -mindepth 1 ! -name .gitkeep -exec rm -rf {} + 2>/dev/null || true
+# sitting in a developer's src/ext/ must not ride along into the package. The
+# .htaccess deny rule does ship, so the directory is never web-readable.
+find "$root/ext" -mindepth 1 ! -name .gitkeep ! -name .htaccess -exec rm -rf {} + 2>/dev/null || true
 
 prune_vendor "$root/vendor/vs"
 deb_scrub "$root"

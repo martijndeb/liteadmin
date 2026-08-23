@@ -32,9 +32,10 @@ src/databases/*
 !src/databases/.htaccess
 !src/databases/sample.sqlite
 
-# Loadable SQLite extension binaries dropped into src/ext/
+# Loadable SQLite extension binaries dropped into src/ext/ (keep the .htaccess)
 src/ext/*
 !src/ext/.gitkeep
+!src/ext/.htaccess
 
 # Runtime plugin data (API-key store, etc.)
 src/data/

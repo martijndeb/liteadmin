@@ -172,14 +172,25 @@ class App {
     }
 
     static function ext_path($ext) {
-        if ($ext === '' || $ext[0] === '/') return $ext;
+        if ($ext === '') return $ext;
+        if ($ext[0] === '/') return self::ext_suffix($ext);
         $cfg = self::config();
         $dir = $cfg['ext_dir'] ?? null;
         if ($dir && strpos($ext, '/') === false) {
             if ($dir[0] !== '/') $dir = __DIR__ . '/' . $dir;
-            return rtrim($dir, '/') . '/' . $ext;
+            return self::ext_suffix(rtrim($dir, '/') . '/' . $ext);
         }
-        return __DIR__ . '/' . $ext;
+        return self::ext_suffix(__DIR__ . '/' . $ext);
+    }
+
+    // loadExtension() resolves its argument with realpath(), so the file has to exist
+    // verbatim. Try the platform suffixes so config values may leave them off ("vec0").
+    static function ext_suffix($path) {
+        if (is_file($path)) return $path;
+        foreach (['.so', '.dylib', '.dll'] as $suffix) {
+            if (is_file($path . $suffix)) return $path . $suffix;
+        }
+        return $path;
     }
 
     static function resolve($key, $forCreate = false) {

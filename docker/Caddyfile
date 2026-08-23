@@ -7,6 +7,7 @@
 		path /lib.php
 		path /databases/*
 		path /data/*
+		path /ext/*
 		path *.sqlite *.sqlite3 *.db *.sqlite-wal *.sqlite-shm *.sqlite-journal
 	}
 	respond @blocked 403

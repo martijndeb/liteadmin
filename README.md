@@ -128,6 +128,12 @@ sudo unattended-upgrade --dry-run --debug 2>&1 | grep -i liteadmin
 The included `Dockerfile` builds a single, self-contained image running **Caddy + php-fpm 8.4**
 (with `pdo_sqlite`). No build step, no external services.
 
+It also bundles [sqlite-vec](https://github.com/asg017/sqlite-vec)'s `vec0` vector-search
+extension. The build picks the loadable binary matching the target architecture — `amd64` for
+x86-64 Linux, `arm64` for Apple Silicon — verifies its SHA-256, installs it as
+`src/ext/vec0.so`, and points `config.json` at it, so `vec_version()` and `vec0` virtual tables
+work on a fresh container without any further setup.
+
 ```bash
 docker build -t liteadmin .
 docker run -d --name liteadmin -p 8080:80 \
@@ -145,6 +151,11 @@ password, so it starts on the setup screen).
 - Session cookies are `Secure` by default. When reaching the container over plain HTTP, set
   `"insecure_http": true` in `config.json`, or (recommended) run it behind a TLS-terminating
   reverse proxy.
+- To move to another sqlite-vec release, override the build args with the version and the two
+  checksums from that release's `checksums.txt`:
+  `docker build --build-arg SQLITE_VEC_VERSION=0.1.9 --build-arg SQLITE_VEC_SHA256_AMD64=… --build-arg SQLITE_VEC_SHA256_ARM64=… -t liteadmin .`
+  To turn the extension off again, drop `vec0` from `extensions` in a bind-mounted
+  `config.json`; the binary stays unused in the image.
 
 Or with Compose:
 
@@ -192,9 +203,11 @@ volumes:
   libraries on connect. `extensions` at the top level is loaded for **every** server database
   (defaults like `vec0`); a per-database `extensions` array adds more for just that one. Bare
   names (e.g. `vec0`) resolve under `ext_dir`; values with a slash are relative to `src/`, and
-  absolute paths are used as-is. The platform suffix (`.so`/`.dylib`/`.dll`) may be omitted.
-  Paths only come from this file (never the client), and the loaded/failed state is shown on the
-  database's **Database** tab. Example:
+  absolute paths are used as-is. The platform suffix (`.so`/`.dylib`/`.dll`) may be omitted —
+  the first one that exists on disk is used. Paths only come from this file (never the client),
+  and the loaded/failed state is shown on the database's **Database** tab. The Docker image
+  ships [sqlite-vec](https://github.com/asg017/sqlite-vec)'s `vec0` and enables it out of the
+  box; elsewhere, drop the binary into `src/ext/` yourself. Example:
 
 ```json
 {
