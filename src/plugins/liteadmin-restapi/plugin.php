@@ -6,8 +6,8 @@
  * front controller (api.php) calls, and the OpenAPI generator.
  *
  * Exposure is stored in a SQLite database in the plugin data dir (restapi.sqlite,
- * mirroring liteadmin-apikeys): one row per exposed database/table pair. When no
- * rows have ever been written (never configured) everything is exposed by default.
+ * mirroring liteadmin-apikeys): one row per exposed database/table pair. A table
+ * is served only while its row is present, so a fresh install serves nothing.
  */
 class RestApiService {
     private $pdo;
@@ -75,11 +75,6 @@ class RestApiService {
 
     /* ---- exposure configuration (SQLite-backed) ------------------------ */
 
-    /** True until the admin saves for the first time (=> expose everything). */
-    private function isDefault() {
-        return (int)$this->pdo->query('SELECT COUNT(*) FROM exposure')->fetchColumn() === 0;
-    }
-
     /** Persist the selection: replace all rows with the given db key => [tables] map. */
     function saveExposure(array $databases) {
         $this->pdo->beginTransaction();
@@ -98,17 +93,15 @@ class RestApiService {
         }
     }
 
-    /** Exposed tables for a db key: '*' (default = all), or an array of names. */
+    /** Names of the tables selected for a db key; empty when none are served. */
     private function exposedTables($dbKey) {
-        if ($this->isDefault()) return '*';
         $st = $this->pdo->prepare('SELECT table_name FROM exposure WHERE db_key = ?');
         $st->execute([$dbKey]);
         return $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
     }
 
     function isExposed($dbKey, $table) {
-        $t = $this->exposedTables($dbKey);
-        return $t === '*' ? true : in_array($table, $t, true);
+        return in_array($table, $this->exposedTables($dbKey), true);
     }
 
     /* ---- admin panel data ---------------------------------------------- */
@@ -118,13 +111,12 @@ class RestApiService {
         $out = [];
         foreach (App::databases() as $key => $db) {
             $sel = $this->exposedTables($key);
-            $all = $sel === '*';
             $tables = [];
             if ($db['exists']) {
                 try {
                     [$pdo] = App::pdo($key);
                     foreach (self::tables($pdo) as $t) {
-                        $tables[] = ['name' => $t, 'exposed' => $all ? true : in_array($t, is_array($sel) ? $sel : [], true)];
+                        $tables[] = ['name' => $t, 'exposed' => in_array($t, $sel, true)];
                     }
                 } catch (Throwable $e) { /* unreadable db -> no tables */ }
             }
@@ -137,7 +129,7 @@ class RestApiService {
                 'tables' => $tables,
             ];
         }
-        return ['databases' => $out, 'is_default' => $this->isDefault()];
+        return ['databases' => $out];
     }
 
     /* ---- CRUD primitives (called by api.php) --------------------------- */
