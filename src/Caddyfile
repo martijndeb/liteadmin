@@ -11,12 +11,16 @@ liteadmin.example.com {
 	root * /var/www/liteadmin/src
 	encode zstd gzip
 
-	# Never serve secrets, the shared library, raw database files or the data dir.
+	# Never serve secrets, the shared library, raw database files, the data dir
+	# or the loadable SQLite extensions. These rules are a set: `path` does not
+	# resolve "..", so /ext/../config.json is caught by the /config.json rule
+	# rather than by /ext/*. Every sensitive path needs its own rule.
 	@blocked {
 		path /config.json
 		path /lib.php
 		path /databases/*
 		path /data/*
+		path /ext/*
 		path *.sqlite *.sqlite3 *.db *.sqlite-wal *.sqlite-shm *.sqlite-journal
 	}
 	respond @blocked 403
