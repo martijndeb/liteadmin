@@ -1,0 +1,2 @@
+# Keep README screenshots out of release source archives (git archive / GitHub "Source code").
+docs/screenshots export-ignore

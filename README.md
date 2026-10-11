@@ -5,6 +5,15 @@ no build step, no toolchain. Just serve the `src/` folder with PHP.
 
 Built with the assistance of AI, and a lot of love for SQLite ❤️.
 
+## Screenshots
+
+| | Light | Dark |
+|---|---|---|
+| **Sign in** | ![Sign-in screen, light mode](docs/screenshots/light-login.png) | ![Sign-in screen, dark mode](docs/screenshots/dark-login.png) |
+| **Querying the sample database** | ![SELECT joining users and posts with its result grid, light mode](docs/screenshots/light-query.png) | ![SELECT joining users and posts with its result grid, dark mode](docs/screenshots/dark-query.png) |
+| **Query editor** — schema-aware completion, code lenses, line numbers and minimap | ![Monaco SQL editor suggesting the columns of the aliased posts table, light mode](docs/screenshots/light-editor.png) | ![Monaco SQL editor suggesting the columns of the aliased posts table, dark mode](docs/screenshots/dark-editor.png) |
+| **Profiler** — per-column distinct/null counts, min/max, averages and top values | ![Column profile of the users table, light mode](docs/screenshots/light-profiler.png) | ![Column profile of the users table, dark mode](docs/screenshots/dark-profiler.png) |
+
 ## Features
 
 **Connect & browse**
