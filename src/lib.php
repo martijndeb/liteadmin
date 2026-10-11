@@ -34,6 +34,14 @@ class App {
         header("Referrer-Policy: same-origin");
     }
 
+    /** Per-client login throttle: 5 failures per 15 minutes, then 429. */
+    static function login_throttle($failed = false) {
+        $file = sys_get_temp_dir() . '/liteadmin_login_' . hash('sha256', ($_SERVER['REMOTE_ADDR'] ?? '') . __DIR__);
+        $fails = array_filter(json_decode((string)@file_get_contents($file), true) ?: [], fn($t) => $t > time() - 900);
+        if ($failed) { $fails[] = time(); @file_put_contents($file, json_encode(array_values($fails)), LOCK_EX); }
+        if (count($fails) >= 5) self::fail('Too many failed logins, try again later', 429);
+    }
+
     static function input() {
         $body = file_get_contents('php://input');
         $data = $body ? json_decode($body, true) : [];
@@ -48,8 +56,10 @@ class App {
         $cfg = self::config()['auth'];
         $hash = (string)($cfg['password_hash'] ?? '');
         if ($hash === '') return false;
-        $ok = hash_equals($cfg['username'], (string)$user) && password_verify((string)$pass, $hash);
-        if ($ok) self::start_authed_session();
+        self::login_throttle();
+        // Non-short-circuit & so a wrong username costs the same as a wrong password.
+        $ok = (bool)(hash_equals((string)($cfg['username'] ?? ''), (string)$user) & password_verify((string)$pass, $hash));
+        if ($ok) self::start_authed_session(); else self::login_throttle(true);
         return $ok;
     }
 

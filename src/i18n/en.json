@@ -301,6 +301,7 @@
   "compare.apply": "Apply to target",
   "compare.applied": "Migration applied",
   "compare.applyConfirm": "Apply migration to {db}? This changes the target database.",
+  "compare.schemaDiff": "Schema diff — edit the right side to preview changes live",
   "gen.generated": "Generated",
   "gen.gen": "Gen",
   "gen.expression": "Expression",

@@ -301,6 +301,7 @@
   "compare.apply": "Tillämpa på målet",
   "compare.applied": "Migrering tillämpad",
   "compare.applyConfirm": "Tillämpa migrering på {db}? Detta ändrar måldatabasen.",
+  "compare.schemaDiff": "Schemadiff — redigera högersidan för att se ändringar live",
   "gen.generated": "Beräknad",
   "gen.gen": "Ber",
   "gen.expression": "Uttryck",

@@ -81,4 +81,6 @@ $html = strtr($html, [
     '{{LANG}}' => htmlspecialchars($cfg['lang'] ?? 'en', ENT_QUOTES),
 ]);
 header('Content-Type: text/html; charset=utf-8');
+// Monaco injects <style> and spawns blob: workers; sql.js compiles WebAssembly.
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; worker-src 'self' blob:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
 echo $html;

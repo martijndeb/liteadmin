@@ -3,7 +3,7 @@ import { barChart, lineChart } from '../chart.js';
 import { erSvg, erMermaid } from '../erdiagram.js';
 import { t } from '../i18n.js';
 import { prefs, history } from '../store.js';
-import { setSchema, createEditor, colorizeSql } from '../editor.js';
+import { setSchema, createEditor, createDiffEditor, formatDdl, colorizeSql } from '../editor.js';
 import { renderGrid } from '../grid.js';
 import { MAINTENANCE } from '../connection.js';
 import { Api } from '../api.js';
@@ -116,7 +116,7 @@ function renderRail(ws) {
 
 async function loadSchema(ws, table) {
   const schema = await ws.conn.schema(table);
-  ws.columnsMap[table] = schema.columns.map(c => c.name);
+  ws.columnsMap[table] = schema.columns;
   setSchema(ws.tables.map(x => x.name), ws.columnsMap);
   return schema;
 }
@@ -124,7 +124,7 @@ async function loadSchema(ws, table) {
 async function ensureColumns(ws) {
   const todo = ws.tables.filter(x => !x.internal && !ws.columnsMap[x.name]);
   await Promise.all(todo.map(async x => {
-    try { ws.columnsMap[x.name] = (await ws.conn.schema(x.name)).columns.map(c => c.name); } catch (_) {}
+    try { ws.columnsMap[x.name] = (await ws.conn.schema(x.name)).columns; } catch (_) {}
   }));
   setSchema(ws.tables.map(x => x.name), ws.columnsMap);
 }
@@ -707,15 +707,19 @@ async function compareDatabaseDialog(ws) {
   const targets = dbs.filter(d => d.key !== ws.conn.id && d.exists);
   const sel = el('select', {}, targets.map(d => el('option', { value: d.key, text: d.label })));
   const out = el('div', {});
-  let lastSql = '';
+  const diffHost = el('div', { class: 'editor-host diff-host' });
+  let lastSql = '', diff = null;
   async function run() {
     clear(out); out.append(el('progress', { class: 'circle' }));
     try {
-      const result = await diffDatabases(ws.conn, serverReader(sel.value));
+      const target = serverReader(sel.value);
+      const [result, a, b] = await Promise.all([diffDatabases(ws.conn, target), schemaDdl(ws.conn, null, true), schemaDdl(target, null, true)]);
       lastSql = result.migration;
       clear(out); out.append(dbDiffView(result, applyMigration));
+      if (diff) diff.set(a, b); else diff = await createDiffEditor(diffHost, a, b, prefs.get('fontSize'));
     } catch (e) { clear(out); out.append(errorBox(e)); }
   }
+  sel.addEventListener('change', run);
   async function applyMigration() {
     if (!lastSql.trim()) return;
     const label = sel.options[sel.selectedIndex].text;
@@ -735,10 +739,13 @@ async function compareDatabaseDialog(ws) {
     el('h5', { text: t('compare.title') + ' — ' + ws.conn.meta.label }),
     el('p', { class: 'small-text', text: t('compare.intro') }),
     controls,
+    targets.length ? section(t('compare.schemaDiff'), diffHost) : null,
     out,
-    el('nav', { class: 'right-align' }, [el('button', { class: 'border', text: t('prefs.close'), onClick: () => dlg.remove() })]),
+    el('nav', { class: 'right-align' }, [el('button', { class: 'border', text: t('prefs.close'), onClick: () => dlg.close() })]),
   ]);
+  dlg.addEventListener('close', () => { if (diff) diff.dispose(); dlg.remove(); });
   document.body.append(dlg); dlg.showModal();
+  if (targets.length) run();
 }
 
 function tableDiffView(nameA, nameB, a, b) {
@@ -770,13 +777,17 @@ async function compareTableDialog(ws) {
   if (!others.length) return toast(t('compare.none'), true);
   const sel = el('select', {}, others.map(x => el('option', { value: x.name, text: x.name })));
   const out = el('div', {});
+  const diffHost = el('div', { class: 'editor-host diff-host' });
+  let diff = null;
   async function run() {
     clear(out); out.append(el('progress', { class: 'circle' }));
     try {
-      const [a, b] = await Promise.all([ws.conn.schema(ws.table), ws.conn.schema(sel.value)]);
+      const [a, b, da, db] = await Promise.all([ws.conn.schema(ws.table), ws.conn.schema(sel.value), schemaDdl(ws.conn, ws.table, true), schemaDdl(ws.conn, sel.value, true)]);
       clear(out); out.append(tableDiffView(ws.table, sel.value, a, b));
+      if (diff) diff.set(da, db); else diff = await createDiffEditor(diffHost, da, db, prefs.get('fontSize'));
     } catch (e) { clear(out); out.append(errorBox(e)); }
   }
+  sel.addEventListener('change', run);
   const dlg = el('dialog', { class: 'large fit', 'aria-label': t('compare.table') }, [
     el('h5', { text: t('compare.table') + ' — ' + ws.table }),
     el('nav', { class: 'wrap toolbar' }, [
@@ -784,8 +795,10 @@ async function compareTableDialog(ws) {
       el('button', { onClick: run }, [el('i', { text: 'difference' }), el('span', { text: t('compare.title') })]),
     ]),
     out,
-    el('nav', { class: 'right-align' }, [el('button', { class: 'border', text: t('prefs.close'), onClick: () => dlg.remove() })]),
+    section(t('compare.schemaDiff'), diffHost),
+    el('nav', { class: 'right-align' }, [el('button', { class: 'border', text: t('prefs.close'), onClick: () => dlg.close() })]),
   ]);
+  dlg.addEventListener('close', () => { if (diff) diff.dispose(); dlg.remove(); });
   document.body.append(dlg); dlg.showModal();
   run();
 }
@@ -1251,8 +1264,8 @@ function bytecodeView(columns, rows) {
   ]);
 }
 
-async function explainPlan(ws, out) {
-  const sql = ((ws.editor && ws.editor.getValue()) || '').trim();
+async function explainPlan(ws, out, only) {
+  const sql = (only || (ws.editor && ws.editor.getValue()) || '').trim();
   if (!sql) return;
   clear(out); out.append(el('progress', { class: 'circle' }));
   try {
@@ -1500,7 +1513,10 @@ async function sqlTab(ws) {
     host, el('div', { class: 'v-space' }), out,
   );
 
-  ws.editor = await createEditor(host, ws.sqlText, prefs.get('fontSize'));
+  ws.editor = await createEditor(host, ws.sqlText, prefs.get('fontSize'), { lenses: [
+    { title: '▶ ' + t('sql.run'), run: sql => run(false, sql) },
+    { title: t('explain.title'), run: sql => explainPlan(ws, out, sql), when: sql => /^\s*(SELECT|WITH|UPDATE|DELETE|INSERT|REPLACE)\b/i.test(sql) },
+  ] });
   ws.editor.onDidChangeModelContent(() => { ws.sqlText = ws.editor.getValue(); });
   ensureColumns(ws);
   ws.editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => run(false));
@@ -1508,8 +1524,8 @@ async function sqlTab(ws) {
   runBtn.addEventListener('click', () => run(false));
   scriptBtn.addEventListener('click', () => run(true));
 
-  async function run(script) {
-    const sql = (ws.editor.getValue() || '').trim();
+  async function run(script, only) {
+    const sql = (only || ws.editor.getValue() || '').trim();
     if (!sql) return;
     clear(out); out.append(el('progress', { class: 'circle' }));
     try {
@@ -1826,7 +1842,7 @@ function createTab(ws) {
       el('label', { class: 'checkbox' }, [wrowidChk, el('span', { text: t('strict.withoutRowid') })]),
     ]),
   ]);
-  const viewGroup = el('div', {}, [el('div', { class: 'field label border textarea' }, [viewSql, el('label', { text: t('create.viewSelect') })])]);
+  const viewGroup = el('div', {}, [el('div', { class: 'field label border' }, [viewSql, el('label', { text: t('create.viewSelect') })])]);
   const virtualGroup = el('div', {}, [
     el('div', { class: 'field label border' }, [moduleInput, el('label', { text: t('create.module') })]),
     el('div', { class: 'field label border' }, [moduleArgs, el('label', { text: t('create.moduleArgs') })]),
@@ -2181,13 +2197,18 @@ async function codeViewerDialog(title, content, opts) {
   catch (_) { host.append(el('pre', { class: 'code-block scroll', text: content })); }
 }
 
+/** Schema DDL (whole database, or one table with its indexes/triggers), tables first. */
+async function schemaDdl(reader, table, pretty) {
+  const res = await reader.query(
+    "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' " + (table == null ? '' : 'AND tbl_name = ? ') +
+    "ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'trigger' THEN 2 ELSE 3 END, name",
+    { limit: 100000, ...(table == null ? {} : { params: [table] }) });
+  return res.rows.map(r => pretty ? formatDdl(r[0]) : String(r[0]).trim().replace(/;?\s*$/, ';')).join('\n\n') + '\n';
+}
+
 async function exportSchema(ws) {
   try {
-    const res = await ws.conn.query(
-      "SELECT sql FROM sqlite_master WHERE sql IS NOT NULL AND name NOT LIKE 'sqlite\\_%' ESCAPE '\\' " +
-      "ORDER BY CASE type WHEN 'table' THEN 0 WHEN 'index' THEN 1 WHEN 'trigger' THEN 2 ELSE 3 END, name",
-      { limit: 100000 });
-    const ddl = res.rows.map(r => String(r[0]).trim().replace(/;?\s*$/, ';')).join('\n\n') + '\n';
+    const ddl = await schemaDdl(ws.conn);
     await codeViewerDialog(t('db.exportSchema'), ddl, { language: 'sql', filename: (ws.conn.meta.label || 'schema') + '.schema.sql', mime: 'application/sql' });
   } catch (e) { toast(e.message, true); }
 }

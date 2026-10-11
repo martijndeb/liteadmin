@@ -301,6 +301,7 @@
   "compare.apply": "Auf Ziel anwenden",
   "compare.applied": "Migration angewendet",
   "compare.applyConfirm": "Migration auf {db} anwenden? Dies ändert die Zieldatenbank.",
+  "compare.schemaDiff": "Schema-Diff — rechte Seite bearbeiten für eine Live-Vorschau",
   "gen.generated": "Berechnet",
   "gen.gen": "Ber",
   "gen.expression": "Ausdruck",

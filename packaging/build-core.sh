@@ -16,12 +16,13 @@ cd "$(dirname "$0")/.."
 . packaging/lib.sh
 
 # prune_vendor <vs-dir>
-# Monaco is vendored as its full `min/vs` distribution: ~13 MB, of which the app
-# loads about 2. Every language is registered in editor.main.js with a lazy
-# `loader: () => require([...])` that only fires for that language id, and the
-# localized UI bundles are only fetched when require.config sets an available
-# language. LiteAdmin uses the 'sql' and 'json' languages and never configures a
-# locale (src/js/editor.js), so the rest is dead weight in every install.
+# Monaco (0.57) is vendored as its full AMD `min/vs` distribution: ~25 MB, of which
+# the app loads a fraction. editor.main.js only references the per-language worker
+# URLs (assets/*.worker-*.js); a worker is fetched when a model of that language
+# is created. LiteAdmin creates 'sql' and 'json' models only, so the TypeScript,
+# CSS and HTML workers and their language/* re-export shims are dead weight. The
+# UI locale is set from the app language (src/js/editor.js); Monaco ships no
+# nl/fy/sv bundle, so only de survives.
 #
 # packaging/verify-deb.sh asserts that everything the app does load survived, so
 # a bad edit here or a future re-vendoring fails the release build rather than
@@ -29,15 +30,9 @@ cd "$(dirname "$0")/.."
 prune_vendor() {
     vs="$1"
     [ -d "$vs" ] || return 0
-
-    # Language services for languages the app never opens.
     rm -rf "$vs/language/typescript" "$vs/language/css" "$vs/language/html"
-
-    # Syntax definitions: keep sql, drop the other ~79.
-    find "$vs/basic-languages" -mindepth 1 -maxdepth 1 -type d ! -name sql -exec rm -rf {} +
-
-    # Localized UI strings; editor.main.nls.js (the default) stays.
-    find "$vs/editor" -maxdepth 1 -name 'editor.main.nls.*.js' -delete
+    rm -f "$vs"/assets/ts.worker-*.js "$vs"/assets/css.worker-*.js "$vs"/assets/html.worker-*.js
+    find "$vs/nls/lang" -type f ! -name de.js -delete
 }
 
 stage="$(mktemp -d)/liteadmin"

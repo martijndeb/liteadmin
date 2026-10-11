@@ -32,11 +32,9 @@ i18n/en.json
 vendor/vs/loader.js
 vendor/vs/editor/editor.main.js
 vendor/vs/editor/editor.main.css
-vendor/vs/editor/editor.main.nls.js
-vendor/vs/basic-languages/sql/sql.js
-vendor/vs/language/json/jsonMode.js
-vendor/vs/language/json/jsonWorker.js
-vendor/vs/base/worker/workerMain.js
+vendor/vs/nls.messages-loader.js
+vendor/vs/nls/lang/de.js
+vendor/vs/basic-languages/monaco.contribution.js
 "
 
 # Runtime state, local overrides, separately-packaged content, and the vendored
@@ -60,12 +58,13 @@ check_core() {
     for f in $CORE_FORBIDDEN; do
         grep -qE "^usr/share/liteadmin/$f(/|\$)" "$listing" && bad "ships $f"
     done
-    # Localized editor bundles: only the default one is loaded.
-    locales="$(grep -c 'editor\.main\.nls\..*\.js$' "$listing" || true)"
-    [ "$locales" = 0 ] || bad "ships $locales unused editor locale bundles"
-    # Syntax definitions: sql only.
-    langs="$(grep -c '^usr/share/liteadmin/vendor/vs/basic-languages/[^/]*/' "$listing" || true)"
-    [ "$langs" -le 2 ] || bad "unpruned basic-languages ($langs entries)"
+    # Workers the app loads: the editor's own and json's. The rest are pruned.
+    for w in editor json; do
+        grep -qE "^usr/share/liteadmin/vendor/vs/assets/$w\.worker-[^/]*\.js\$" "$listing" || bad "missing $w worker"
+    done
+    grep -qE '^usr/share/liteadmin/vendor/vs/assets/(ts|css|html)\.worker-' "$listing" && bad "unpruned language workers"
+    locales="$(grep -c '^usr/share/liteadmin/vendor/vs/nls/lang/' "$listing" || true)"
+    [ "$locales" -le 1 ] || bad "ships $locales editor locale bundles"
     return 0
 }
 

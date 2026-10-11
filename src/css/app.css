@@ -82,9 +82,13 @@ button:not(.border):not(.transparent):not(.circle):not(.chip):not(:disabled):hov
 button:not(.border):not(.transparent):not(.circle):not(.chip):not(:disabled):active { transform: translateY(0); }
 
 .app-shell { flex: 1; display: grid; grid-template-columns: var(--rail) 1fr; min-height: 0; }
+/* beercss 5 turns any parent of <main> into its page grid (areas, 100dvh) and
+   gives <main> grid-area/padding/overflow; this shell is our own two-column grid. */
+.app-shell { grid-template-rows: minmax(0, 1fr); grid-template-areas: none; min-block-size: 0; }
+.app-shell > main { grid-area: auto; padding: 0; overflow: visible; }
 .rail {
   border-right: 1px solid var(--outline-variant); overflow-y: auto; min-height: 0;
-  display: flex; flex-direction: column;
+  display: flex; flex-direction: column; align-items: stretch; gap: 0; white-space: normal;
   background:
     linear-gradient(180deg, color-mix(in srgb, var(--primary) 7%, transparent), transparent 22rem),
     var(--surface-container-lowest);
@@ -207,6 +211,8 @@ table.datagrid td.fk-link:hover { background: var(--primary-container); }
 }
 
 .toolbar { margin: 0 0 1rem; gap: .5rem; align-items: center; }
+/* Not beercss 5's M3 floating toolbar: a plain row of controls. */
+nav.toolbar { display: flex; justify-content: flex-start; border-radius: 0; background: none; color: inherit; padding: 0; min-block-size: auto; min-inline-size: auto; }
 .work-body > .grid-wrap { margin-top: 0; }
 
 .metrics-row { gap: .4rem; margin: -.25rem 0 1rem; }
@@ -269,11 +275,17 @@ table.datagrid td.null { color: var(--outline); font-style: italic; }
   border-radius: .75rem; resize: vertical; overflow: hidden;
 }
 
-.monaco-editor * { position: static; }
-.monaco-editor, .monaco-editor * {
-  box-sizing: content-box; border-radius: 0; vertical-align: baseline;
+/* beercss resets every element (* { position: relative; border-radius: inherit; ... }),
+   which breaks Monaco's absolutely positioned gutter, minimap and widgets. Roll that
+   back to browser defaults at zero specificity: beats beer's *, loses to all of Monaco's own CSS. */
+:where(.monaco-editor, .monaco-diff-editor, .monaco-editor *, .monaco-diff-editor *) {
+  position: revert; vertical-align: revert; margin: revert; padding: revert;
+  border-radius: revert; box-sizing: revert;
 }
-.monaco-editor .overflow-guard, .monaco-editor .monaco-scrollable-element { position: absolute; }
+/* beer's spacing helpers match Monaco class names (the gutter is literally .margin, plus
+   glyph-margin, current-line-margin, ...) and add margin: 1rem !important, shifting the gutter. */
+:is(.monaco-editor, .monaco-diff-editor) :is(.margin, [class*=-margin], .padding, [class*=-padding]) { --_margin: 0; --_padding: 0; }
+:is(.monaco-editor, .monaco-diff-editor) :has(> [class*=margin]) { padding: revert; }
 .history-item { padding: .85rem 1rem; margin-bottom: .6rem; transition: border-color .15s ease, transform .12s ease, box-shadow .15s ease; }
 .history-item:hover { border-color: var(--accent-bright); transform: translateY(-1px); box-shadow: 0 8px 22px -12px color-mix(in srgb, var(--accent-bright) 30%, #0004); }
 .history-item code { white-space: pre-wrap; word-break: break-word; display: block; }
@@ -386,3 +398,4 @@ dialog.fit > nav:last-child {
   .app-shell.show-rail::after { content: ""; position: fixed; inset: 3.5rem 0 0 0; background: #0006; z-index: 10; }
   .work-body { padding: 1rem; }
 }
+.diff-host { height: 55vh; resize: none; }

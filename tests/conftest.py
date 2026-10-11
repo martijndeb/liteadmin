@@ -106,7 +106,8 @@ def auth_state(browser, base_url):
 def authed_page(browser, base_url, auth_state):
     """A page with the saved session, so the app boots straight to the
     database picker."""
-    context = browser.new_context(base_url=base_url, storage_state=auth_state)
+    # bypass_csp: the page CSP (no unsafe-eval) blocks string predicates in wait_for_function.
+    context = browser.new_context(base_url=base_url, storage_state=auth_state, bypass_csp=True)
     page = context.new_page()
     yield page
     context.close()

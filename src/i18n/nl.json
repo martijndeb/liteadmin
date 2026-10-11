@@ -301,6 +301,7 @@
   "compare.apply": "Toepassen op doel",
   "compare.applied": "Migratie toegepast",
   "compare.applyConfirm": "Migratie toepassen op {db}? Dit wijzigt de doeldatabase.",
+  "compare.schemaDiff": "Schemaverschil — bewerk de rechterkant om wijzigingen live te zien",
   "gen.generated": "Berekend",
   "gen.gen": "Ber",
   "gen.expression": "Expressie",

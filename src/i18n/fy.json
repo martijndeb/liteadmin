@@ -301,6 +301,7 @@
   "compare.apply": "Tapasse op doel",
   "compare.applied": "Migraasje tapast",
   "compare.applyConfirm": "Migraasje tapasse op {db}? Dit wizigt de doeldatabank.",
+  "compare.schemaDiff": "Skemaferskil — bewurkje de rjochterkant om feroarings live te sjen",
   "gen.generated": "Berekene",
   "gen.gen": "Ber",
   "gen.expression": "Ekspresje",
