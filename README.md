@@ -355,7 +355,7 @@ The `pre-commit` hook then rejects any commit that stages a non-empty
 
 ## Contact
 
-Use the issues tab for technical issues, or reach out on Mastodon on my handle @martijn@ieji.de .
+Use the issues tab for technical issues, or reach out on Mastodon on my handle [@martijn@ieji.de](https://ieji.de/@martijn).
 
 ## License
 
