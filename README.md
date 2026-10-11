@@ -293,9 +293,8 @@ tables as a **CRUD REST API**. It depends on `liteadmin-apikeys` and needs no ne
 - **Exposure panel:** open **REST API** from the Plugins section to choose which databases and tables
   are served (with **Select all** / **Deselect all**). A database is served once at least one of its
   tables is selected. The selection is stored in a SQLite database in the plugin data dir
-  (`restapi.sqlite`), the same way `liteadmin-apikeys` stores its keys. Until you save for the first
-  time, **all databases and tables are exposed by default** — but the plugin still does nothing until
-  it is enabled.
+  (`restapi.sqlite`), the same way `liteadmin-apikeys` stores its keys. **Nothing is served until you
+  select it and save**, and deselecting everything takes it all off the API again.
 - **Not auto-enabled:** unlike other plugins, its `.deb` does **not** add itself to `plugins` on
   install (it serves data, so enabling is left deliberate). Enable it by adding `"liteadmin-restapi"`
   to `plugins` in the config.

@@ -2,6 +2,9 @@
 	root * /var/www/liteadmin/src
 	encode zstd gzip
 
+	# These rules are a set: `path` does not resolve "..", so /ext/../config.json
+	# is caught by the /config.json rule rather than by /ext/*. Every sensitive
+	# path needs its own rule.
 	@blocked {
 		path /config.json
 		path /lib.php
