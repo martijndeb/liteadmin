@@ -1,0 +1,20 @@
+#!/bin/sh
+set -e
+
+# Enable the plugin by adding its name to "plugins" in the LiteAdmin config.
+if [ "$1" = "configure" ]; then
+    CONFIG=/etc/liteadmin/config.json
+    if [ -f "$CONFIG" ] && command -v php >/dev/null 2>&1; then
+        php -r '
+            $f = $argv[1]; $name = $argv[2];
+            $c = json_decode(@file_get_contents($f), true);
+            if (!is_array($c)) $c = [];
+            $p = (isset($c["plugins"]) && is_array($c["plugins"])) ? $c["plugins"] : [];
+            if (!in_array($name, $p, true)) $p[] = $name;
+            $c["plugins"] = array_values($p);
+            file_put_contents($f, json_encode($c, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n");
+        ' "$CONFIG" liteadmin-auditlog || true
+    fi
+fi
+
+exit 0

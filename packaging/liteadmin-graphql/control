@@ -1,0 +1,17 @@
+Package: liteadmin-graphql
+Version: __VERSION__
+Section: web
+Priority: optional
+Architecture: all
+Depends: liteadmin (>= 0.3.0), liteadmin-apikeys (>= 0.3.0), liteadmin-restapi (>= 0.1.0), php-cli
+Maintainer: Martijn de Boer <git@sexybiggetje.nl>
+Homepage: https://github.com/martijndeb/liteadmin
+Description: GraphQL API plugin for LiteAdmin
+ Serves the databases and tables selected in the liteadmin-restapi panel as a
+ GraphQL API at /graphql/<database>: list, by-key and count queries, insert,
+ update and delete mutations, and relation fields derived from foreign keys.
+ Requests are authenticated with liteadmin-apikeys (mutations need a read+write
+ key), the schema is published as SDL at /graphql/<database>/schema.graphql, and
+ admins get a query console in the Plugins panel. No external dependencies.
+ Like the REST API it serves data, so it is NOT enabled automatically on
+ install: add "liteadmin-graphql" to the config to enable it.

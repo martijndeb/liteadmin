@@ -65,12 +65,12 @@ class ApiKeysPlugin {
             $pdo->prepare('INSERT INTO api_keys (label, key_hash, scope, created) VALUES (?,?,?,?)')
                 ->execute([$label, ApiKeysService::hashKey($key), $scope, time()]);
             return ['id' => (int)$pdo->lastInsertId(), 'label' => $label, 'scope' => $scope, 'key' => $key];
-        }, ['auth' => 'session']);
+        }, ['auth' => 'session', 'audit' => true]);
 
         $host->route('revoke', function ($in) use ($pdo) {
             $pdo->prepare('DELETE FROM api_keys WHERE id = ?')->execute([(int)($in['id'] ?? 0)]);
             return ['ok' => true];
-        }, ['auth' => 'session']);
+        }, ['auth' => 'session', 'audit' => true]);
 
         // Demo endpoint authenticated by the apikey guard — the pattern other plugins reuse.
         $host->route('whoami', function () use ($service) {

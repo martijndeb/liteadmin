@@ -42,6 +42,26 @@ class App {
         if (count($fails) >= 5) self::fail('Too many failed logins, try again later', 429);
     }
 
+    /**
+     * Report a write to plugins listening on 'write' (liteadmin-auditlog). Called after
+     * the write ran, so a failing listener is logged and never undoes or blocks it.
+     * Free when no plugins are enabled.
+     */
+    static function audit(array $event) {
+        if (empty(self::config()['plugins'])) return;
+        try {
+            require_once __DIR__ . '/plugins.php';
+            Plugins::boot();
+            Plugins::emit('write', $event + [
+                'actor' => self::authed() ? 'admin:' . (self::config()['auth']['username'] ?? 'admin') : 'anonymous',
+                'ip' => $_SERVER['REMOTE_ADDR'] ?? '',
+                'ok' => true,
+            ]);
+        } catch (Throwable $e) {
+            error_log('LiteAdmin audit listener failed: ' . $e->getMessage());
+        }
+    }
+
     static function input() {
         $body = file_get_contents('php://input');
         $data = $body ? json_decode($body, true) : [];

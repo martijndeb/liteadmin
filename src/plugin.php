@@ -26,6 +26,12 @@ if ($auth === 'session') {
 
 try {
     $result = ($route['handler'])($in);
+    // Routes registered with 'audit' => true change state (keys, exposure, ...).
+    // Log the request with secrets dropped, never the response (it may hold a new key).
+    if (!empty($route['opts']['audit'])) {
+        App::audit(['source' => 'plugin', 'action' => $name . ':' . $action,
+            'detail' => array_diff_key($in, array_flip(['plugin', 'action', 'password', 'key', 'secret', 'token']))]);
+    }
     App::ok(is_array($result) ? $result : []);
 } catch (Throwable $e) {
     App::fail($e->getMessage(), 400);

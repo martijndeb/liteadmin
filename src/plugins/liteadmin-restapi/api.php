@@ -98,6 +98,8 @@ if (!$svc->isExposed($dbKey, $table)) rest_error(404, 'Table is not exposed');
 $method = strtoupper($_SERVER['REQUEST_METHOD'] ?? 'GET');
 $write = in_array($method, ['POST', 'PUT', 'PATCH', 'DELETE'], true);
 if ($write && ($keyRow['scope'] ?? '') !== 'write') rest_error(403, 'This API key lacks the read+write scope');
+// Audit-log event for a write; completed and sent once the outcome is known.
+$audit = $write ? ['source' => 'rest', 'actor' => 'apikey:' . ($keyRow['label'] ?? '?'), 'action' => $method, 'db' => $dbKey, 'target' => $table, 'id' => $segs[2] ?? null] : null;
 
 try {
     [$pdo, $dbInfo] = App::pdo($dbKey, false, $write);
@@ -116,19 +118,25 @@ try {
 
         case 'POST':
             if ($id !== null) rest_error(405, 'POST is only allowed on a collection');
-            rest_json(201, $svc->createRow($pdo, $table, rest_body()));
+            $body = rest_body();
+            $row = $svc->createRow($pdo, $table, $body);
+            App::audit(['id' => $pdo->lastInsertId()] + $audit + ['detail' => $body, 'changes' => 1]);
+            rest_json(201, $row);
             break;
 
         case 'PUT':
         case 'PATCH':
             if ($id === null) rest_error(405, $method . ' requires an item id');
-            $row = $svc->updateRow($pdo, $table, $id, rest_body());
+            $body = rest_body();
+            $row = $svc->updateRow($pdo, $table, $id, $body);
+            if ($row !== null) App::audit($audit + ['detail' => $body, 'changes' => 1]);
             $row === null ? rest_error(404, 'Not found') : rest_json(200, $row);
             break;
 
         case 'DELETE':
             if ($id === null) rest_error(405, 'DELETE requires an item id');
             $n = $svc->deleteRow($pdo, $table, $id);
+            if ($n) App::audit($audit + ['changes' => $n]);
             $n ? rest_json(200, ['deleted' => $n]) : rest_error(404, 'Not found');
             break;
 
@@ -136,17 +144,14 @@ try {
             header('Allow: GET, POST, PUT, PATCH, DELETE');
             rest_error(405, 'Method not allowed');
     }
-} catch (PDOException $e) {
-    // Driver errors (constraints, type mismatches) can expose internals — log the
-    // detail, return a category message without identifiers or SQL. Note this must
-    // precede the RuntimeException catch below, as PDOException extends it.
-    error_log('liteadmin-restapi: ' . $e->getMessage());
-    rest_error(400, 'The database rejected the request (check required fields and value types)');
-} catch (RuntimeException $e) {
-    // Our own validation errors carry safe, deliberate messages.
-    rest_error(400, $e->getMessage());
 } catch (Throwable $e) {
-    // Anything else — log it, stay generic.
+    if ($audit) App::audit($audit + ['ok' => false, 'error' => $e->getMessage()]);
+    // Our own validation errors (RuntimeException) carry safe, deliberate messages.
+    // Driver errors (PDOException extends RuntimeException) can expose internals, as
+    // can anything else: log the detail, answer with a category message.
+    if ($e instanceof RuntimeException && !$e instanceof PDOException) rest_error(400, $e->getMessage());
     error_log('liteadmin-restapi: ' . $e->getMessage());
-    rest_error(400, 'Request could not be processed');
+    rest_error(400, $e instanceof PDOException
+        ? 'The database rejected the request (check required fields and value types)'
+        : 'Request could not be processed');
 }

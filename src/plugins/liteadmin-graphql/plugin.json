@@ -1,0 +1,11 @@
+{
+  "name": "liteadmin-graphql",
+  "label": "GraphQL API",
+  "version": "0.1.0",
+  "description": "Serve the tables exposed by the REST API plugin as a GraphQL API at /graphql/<database>, with relations from foreign keys, mutations for read+write API keys, an SDL document per database and an admin query console.",
+  "server": "plugin.php",
+  "serverClass": "GraphQLPlugin",
+  "client": "plugin.js",
+  "provides": ["graphql"],
+  "requires": ["liteadmin-apikeys", "liteadmin-restapi"]
+}

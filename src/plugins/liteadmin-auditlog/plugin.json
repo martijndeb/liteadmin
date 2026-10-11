@@ -1,0 +1,11 @@
+{
+  "name": "liteadmin-auditlog",
+  "label": "Audit Log",
+  "version": "0.1.0",
+  "description": "Tamper-evident log of every write: SQL run from the editor, REST and GraphQL writes, and admin actions such as API keys and password changes. Browse, search, export and verify it from the Plugins panel.",
+  "server": "plugin.php",
+  "serverClass": "AuditLogPlugin",
+  "client": "plugin.js",
+  "provides": ["auditlog"],
+  "requires": []
+}

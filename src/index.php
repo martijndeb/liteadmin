@@ -46,6 +46,7 @@ if ($action !== null) {
             if (strlen($pw) < 8) App::fail('Password must be at least 8 characters', 400);
             if (!App::set_password($pw)) App::fail('Could not write config.json', 500);
             App::start_authed_session();
+            App::audit(['source' => 'auth', 'action' => 'setup']);
             App::ok(['csrf' => App::csrf()]);
             break;
 
@@ -58,6 +59,7 @@ if ($action !== null) {
             if (!password_verify($cur, App::config()['auth']['password_hash'] ?? '')) App::fail('Current password is incorrect', 403);
             if (strlen($new) < 8) App::fail('New password must be at least 8 characters', 400);
             if (!App::set_password($new)) App::fail('Could not write config.json', 500);
+            App::audit(['source' => 'auth', 'action' => 'change_password']);
             App::ok();
             break;
 

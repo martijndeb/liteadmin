@@ -8,6 +8,8 @@ $action = $in['action'] ?? '';
 $appcfg = App::config()['app'];
 $maxRows = (int)($appcfg['max_rows'] ?? 1000);
 $bufRows = (int)($appcfg['buffer_rows'] ?? 200);
+// Set by write actions before they run, so the catch below can audit a failed write too.
+$audit = null;
 
 function qid($name) {
     return '"' . str_replace('"', '""', (string)$name) . '"';
@@ -43,8 +45,10 @@ try {
             list($pdo, $db) = App::pdo($key, true);
             if ($db['readonly']) App::fail('Read only', 403);
             $sql = trim((string)($in['sql'] ?? ''));
+            $audit = ['source' => 'sql', 'action' => 'create_database', 'db' => $key, 'sql' => $sql];
             if ($sql !== '') $pdo->exec($sql);
             else $pdo->exec('CREATE TABLE IF NOT EXISTS _liteadmin (id INTEGER); DROP TABLE _liteadmin;');
+            App::audit($audit);
             App::ok(['key' => $key, 'label' => $name]);
             break;
         }
@@ -132,6 +136,10 @@ try {
             $sql = (string)($in['sql'] ?? '');
             $params = is_array($in['params'] ?? null) ? $in['params'] : [];
             $limit = min(max((int)($in['limit'] ?? $bufRows), 1), $maxRows);
+            // The SQL editor runs writes through 'query' too; tell them apart for the audit log.
+            $changesBefore = (int)$pdo->query('SELECT total_changes()')->fetchColumn();
+            $readish = (bool)preg_match('~^(?:\s+|--[^\n]*\n?|/\*.*?\*/)*(SELECT|WITH|EXPLAIN|VALUES|PRAGMA\s+[\w.]+\s*(?:\(|;|$))~is', $sql);
+            if (!$readish) $audit = ['source' => 'sql', 'action' => 'query', 'db' => $in['db'] ?? '', 'sql' => $sql, 'params' => $params];
             $t0 = microtime(true);
             $stmt = $pdo->prepare($sql);
             $stmt->execute($params);
@@ -156,6 +164,8 @@ try {
                     'last_insert_id' => $pdo->lastInsertId(),
                 ];
             }
+            $changed = (int)$pdo->query('SELECT total_changes()')->fetchColumn() - $changesBefore;
+            if ($audit || $changed > 0) App::audit(($audit ?? ['source' => 'sql', 'action' => 'query', 'db' => $in['db'] ?? '', 'sql' => $sql, 'params' => $params]) + ['changes' => $changed]);
             App::ok($result);
             break;
         }
@@ -167,6 +177,7 @@ try {
             $params = is_array($in['params'] ?? null) ? $in['params'] : null;
             $tx = !empty($in['tx']) && $params === null;
             $fkoff = !empty($in['fkoff']) && $tx;
+            $audit = ['source' => 'sql', 'action' => $tx ? 'exec_tx' : 'exec', 'db' => $in['db'] ?? '', 'sql' => $sql, 'params' => $params];
             $t0 = microtime(true);
             if ($params !== null) {
                 $stmt = $pdo->prepare($sql);
@@ -181,6 +192,7 @@ try {
             } else {
                 $changes = $pdo->exec($sql);
             }
+            App::audit($audit + ['changes' => $changes]);
             App::ok(['changes' => $changes, 'last_insert_id' => $pdo->lastInsertId(), 'elapsed' => round((microtime(true) - $t0) * 1000)]);
             break;
         }
@@ -211,6 +223,7 @@ try {
             clearstatcache(true, $path);
             $sizeBefore = is_file($path) ? filesize($path) : null;
             $steps = [];
+            $audit = ['source' => 'sql', 'action' => 'optimize', 'db' => $in['db'] ?? ''];
             $journal = $pdo->query('PRAGMA journal_mode=WAL')->fetchColumn(); $steps[] = 'journal_mode=WAL';
             $pdo->exec('PRAGMA optimize'); $steps[] = 'PRAGMA optimize';
             $pdo->exec('ANALYZE'); $steps[] = 'ANALYZE';
@@ -221,6 +234,7 @@ try {
             $pageCount = (int)$pdo->query('PRAGMA page_count')->fetchColumn();
             $freelist = (int)$pdo->query('PRAGMA freelist_count')->fetchColumn();
             clearstatcache(true, $path);
+            App::audit($audit + ['sql' => implode('; ', $steps)]);
             App::ok(['report' => [
                 'journal_mode' => $journal,
                 'integrity' => $integrity,
@@ -259,5 +273,6 @@ try {
             App::fail('Unknown action', 404);
     }
 } catch (Throwable $e) {
+    if ($audit) App::audit($audit + ['ok' => false, 'error' => $e->getMessage()]);
     App::fail($e->getMessage(), 400);
 }

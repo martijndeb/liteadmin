@@ -317,6 +317,65 @@ Caddy config (`docker/Caddyfile`) and `src/.htaccess` (Apache, needs `mod_rewrit
 Under the PHP built-in server, reach the controller directly as
 `/plugins/liteadmin-restapi/api.php/<database>/<table>`.
 
+### Plugin: `liteadmin-graphql`
+
+`src/plugins/liteadmin-graphql/` serves the same tables as a **GraphQL API** at `/graphql/<database>`.
+It depends on `liteadmin-apikeys` and `liteadmin-restapi`. It reuses the REST plugin's table
+selection and CRUD code, so both APIs expose the same tables with the same validation. No
+dependencies: it includes its own small GraphQL parser and executor.
+
+- **Schema per database:** for every exposed table, e.g. `users` → type `Users`:
+  - queries `users(where, order_by, desc, limit, offset)`, `users_by_pk(id)` and `users_count(where)`;
+  - mutations `insert_users(data)`, `update_users(id, data)` and `delete_users(id)` (not on read-only
+    databases);
+  - foreign keys between exposed tables become fields in both directions: `posts { user { name } }`
+    and `users { posts { title } }`.
+- **Language support:** queries and mutations, aliases, variables with defaults, named and inline
+  fragments, `@skip`/`@include`, and `__typename`. A mutation runs as one transaction, so if any of
+  its fields fails, nothing is written. Subscriptions and introspection (`__schema`) are not
+  supported. The schema is published as SDL at `/graphql/<database>/schema.graphql` instead, which
+  GraphQL code generators accept.
+- **Auth & scopes:** an API key as for REST. Any key may query; mutations need a **read+write** key
+  and must be sent with `POST`. The SDL is also readable by a logged-in admin.
+- **Limits:** queries nest at most 10 levels deep and return at most 10,000 rows in total, and each
+  list is capped at `max_rows`.
+- **Console:** open **GraphQL API** from the Plugins section to write queries in the editor, view or
+  download the SDL, and run queries as the admin.
+- **Not auto-enabled:** like the REST API, add `"liteadmin-graphql"` to `plugins` to enable it.
+
+```bash
+curl -s https://liteadmin.example.com/graphql/sample \
+  -H "X-Api-Key: $KEY" -H 'Content-Type: application/json' \
+  -d '{"query": "{ users(limit: 5) { name posts { title } } }"}'
+```
+
+The rewrite from `/graphql/...` to `plugins/liteadmin-graphql/graphql.php` is included in
+`docker/Caddyfile`, `src/.htaccess` and `src/nginx.conf`. Under the PHP built-in server, use
+`/plugins/liteadmin-graphql/graphql.php/<database>`.
+
+### Plugin: `liteadmin-auditlog`
+
+`src/plugins/liteadmin-auditlog/` keeps an **audit log of every write**. Each entry records the time,
+the actor (`admin:<user>` or `apikey:<label>`), the source IP, where the write came from, the
+database, table and row, the SQL or data, the number of rows changed, and whether it succeeded.
+
+- **What is logged:** writes from the SQL editor (including writes sent through *Run*), REST and
+  GraphQL writes, *Analyse & optimise*, creating databases, password setup and changes, and plugin
+  admin actions (API keys created or revoked, API table selection). Failed writes are logged too,
+  with their error. Reads are not logged. Changes to local (in-browser) databases never reach the
+  server, so they are not logged either.
+- **Tamper-evident:** each entry is hash-chained to the previous one. **Verify chain** reports the
+  first entry that was edited or removed.
+- **Browse & export:** open **Audit Log** from the Plugins section to search and filter by source,
+  database and status, open an entry's details, and export the loaded entries as CSV or JSON.
+- **Retention:** **Prune** removes entries older than N days, and the prune itself is logged.
+- **Storage:** `auditlog.sqlite` in the plugin data dir. Its `.deb` enables it on install, and
+  uninstalling keeps the log.
+
+Other plugins can mark their own state-changing routes for the log with
+`$host->route('name', $handler, ['auth' => 'session', 'audit' => true])`. Core reports writes through
+`App::audit([...])`, which emits a `write` event to any plugin listening with `$host->on('write', …)`.
+
 Planned plugins that slot into the same system: a **code generator** (tables → typed
 classes/definitions) and an **MCP server** — each guarding its endpoints with the `apikey` guard above.
 

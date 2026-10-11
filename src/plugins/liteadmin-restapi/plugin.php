@@ -336,6 +336,6 @@ class RestApiPlugin {
             if (!is_array($dbs)) App::fail('Invalid selection', 400);
             if (!$svc->saveExposure($dbs)) App::fail('Could not save selection (is data_dir writable?)', 500);
             return ['ok' => true];
-        }, ['auth' => 'session']);
+        }, ['auth' => 'session', 'audit' => true]);
     }
 }
