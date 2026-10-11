@@ -14,7 +14,9 @@ permissions:
 
 jobs:
   playwright:
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest moves to 26.04 on 2026-10-19; `playwright install --with-deps`
+    # needs per-release support. Bump deliberately once the suite passes on 26.04.
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
 

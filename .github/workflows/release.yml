@@ -8,7 +8,7 @@ permissions:
 
 jobs:
   deb:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # The tag alone is enough to build from; the apt repo is fetched shallowly
       # below. Skipping the history keeps the checkout to a couple of seconds
